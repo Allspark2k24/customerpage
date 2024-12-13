@@ -1,0 +1,15 @@
+/* table, th, td {
+    border: 1px solid black;
+} */
+th, td {
+    padding: 5px;
+    text-align: center;
+}
+
+p {
+    font-size: 20px;
+}
+
+#timeframeLength:focus::placeholder {
+        color: transparent;
+}
