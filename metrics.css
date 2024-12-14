@@ -13,3 +13,10 @@ p {
 #timeframeLength:focus::placeholder {
         color: transparent;
 }
+.icon {
+    cursor: pointer;
+    margin: 10px
+}
+.icon:hover {
+    font-size: 30px
+}
