@@ -111,31 +111,87 @@ function cleanMetricName(metricName) {
 function createTable(data) {
     let metricLabel = cleanMetricName(data.Id)
 
+    let rowDiv = document.createElement("div");
+    rowDiv.classList.add("row")
+    let section = document.createElement("section")
+    section.classList.add("col", "d-flex");
+    let tableWrapper = document.createElement("div");
+    tableWrapper.setAttribute("class", "table-responsive");
     let table = document.createElement("table");
-    let tableRow = document.createElement("tr");
-    table.style.margin = "10px";
-    let tableHeader = document.createElement("th");
-    tableHeader.innerHTML = "Metric Name";
-    table.appendChild(tableRow);
-    tableRow.appendChild(tableHeader);
+    table.setAttribute("class", "table");
+    let tableHead = document.createElement("thead");
+    let headerRow = document.createElement("tr");
+    tableHead.appendChild(headerRow);
+    let tableRowMetricName = document.createElement("th");
+    tableRowMetricName.setAttribute("scope", "col");
+    tableRowMetricName.setAttribute("style", "text-decoration: underline;");
+    tableRowMetricName.innerHTML = "Metric Name";
+    headerRow.appendChild(tableRowMetricName);
     data.Timestamps.forEach(timestamp => {
         let header = document.createElement("th");
+        header.setAttribute("scope", "col");
         header.innerHTML = timestamp;
-        tableRow.appendChild(header);
+        headerRow.appendChild(header);
     })
-    let results = document.querySelector("#results");
-    results.appendChild(table)
+    table.appendChild(tableHead);
+    tableWrapper.appendChild(table);
 
-    let dataRow = document.createElement("tr");
-    table.appendChild(dataRow);
-    let metricLabelRow = document.createElement("td");
-    metricLabelRow.innerHTML = metricLabel;
-    dataRow.appendChild(metricLabelRow);
+    let tableBody = document.createElement("tbody");
+    let columnRow = document.createElement("tr");
+    tableBody.appendChild(columnRow);
+    table.appendChild(tableBody);
+    let rowHeader = document.createElement("th");
+    rowHeader.setAttribute("scope", "row");
+    rowHeader.innerHTML = metricLabel;
+    columnRow.appendChild(rowHeader);
     data.Values.forEach(value => {
         let row = document.createElement("td");
         row.innerHTML = value;
-        dataRow.appendChild(row);
+        columnRow.appendChild(row);
     })
+    table.appendChild(tableBody);
+
+    let results = document.querySelector("#results");
+    section.appendChild(tableWrapper);
+    let tableIcon = document.createElement("i")
+    tableIcon.classList.add("fa-solid", "fa-table", "fa-xl", "icon")
+    let chartIcon = document.createElement("i")
+    chartIcon.classList.add("fa-solid", "fa-chart-line", "fa-xl", "icon")
+    let gaugeIcon = document.createElement("i")
+    gaugeIcon.classList.add("fa-solid", "fa-gauge", "fa-xl", "icon")
+    section.appendChild(tableIcon)
+    section.appendChild(chartIcon)
+    section.appendChild(gaugeIcon)
+    rowDiv.appendChild(section)
+    results.appendChild(rowDiv)
+    let lineBreak = document.createElement("br")
+    rowDiv.insertAdjacentElement('afterend', lineBreak)
+
+    // let table = document.createElement("table");
+    // let tableRow = document.createElement("tr");
+    // table.style.margin = "10px";
+    // let tableHeader = document.createElement("th");
+    // tableHeader.innerHTML = "Metric Name";
+    // table.appendChild(tableRow);
+    // tableRow.appendChild(tableHeader);
+    // data.Timestamps.forEach(timestamp => {
+    //     let header = document.createElement("th");
+    //     header.innerHTML = timestamp;
+    //     tableRow.appendChild(header);
+    // })
+    // let results = document.querySelector("#results");
+    // results.appendChild(table)
+
+    // let dataRow = document.createElement("tr");
+    // table.appendChild(dataRow);
+    // let metricLabelRow = document.createElement("td");
+    // metricLabelRow.innerHTML = metricLabel;
+    // dataRow.appendChild(metricLabelRow);
+    // data.Values.forEach(value => {
+    //     let row = document.createElement("td");
+    //     row.innerHTML = value;
+    //     dataRow.appendChild(row);
+    // })
 }
 
 function newCreateTable(data) {
@@ -185,8 +241,9 @@ async function displayMetricTableData() {
     loadingModal.innerHTML = "loading . . .";
     let sectionHeader = document.querySelector(".loading");
     sectionHeader.append(loadingModal);
-    let data = await initialFetchCloudWatchData();
-    sessionStorage.setItem("MetricVisionData", JSON.stringify(data.data.MetricDataResults))
+    // let data = await initialFetchCloudWatchData();
+    // sessionStorage.setItem("MetricVisionData", JSON.stringify(data.data.MetricDataResults))
+    let data = JSON.parse(sessionStorage.getItem("fakeMetricVisionData"))
     console.log(data)
     if (!data.result) {
         sectionHeader.removeChild(loadingModal);
@@ -198,7 +255,9 @@ async function displayMetricTableData() {
         sectionHeader.removeChild(loadingModal);
         let metricDataResults = data.data.MetricDataResults.length;
         for (let i = 0; i < metricDataResults; i++) {
-            newCreateTable(data.data.MetricDataResults[i])
+            // newCreateTable(data.data.MetricDataResults[i])
+            createTable(data.data.MetricDataResults[i])
+
         }
     }
 
@@ -297,10 +356,10 @@ function enableCustomTimeframeButton() {
     }
 }
 
-// let fakeData = { "MetricDataResults": [{ "Id": "calls_per_interval", "Label": "VoiceCalls CallsPerInterval", "Timestamps": ["12/11 10:36 AM", "12/11 2:36 PM"], "Values": [6.0, 2.0] }, { "Id": "missed_calls", "Label": "VoiceCalls MissedCalls", "Timestamps": [], "Values": [] }, { "Id": "calls_breaching_concurrency_quota", "Label": "VoiceCalls CallsBreachingConcurrencyQuota", "Timestamps": [], "Values": [] }, { "Id": "call_recording_upload_error", "Label": "CallRecordings CallRecordingUploadError", "Timestamps": [], "Values": [] }, { "Id": "chats_breaching_active_chat_quota", "Label": "Chats ChatsBreachingActiveChatQuota", "Timestamps": [], "Values": [] }, { "Id": "concurrent_active_chats", "Label": "Chats ConcurrentActiveChats", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowErrors", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_fatal_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowFatalErrors", "Timestamps": [], "Values": [] }, { "Id": "throttled_calls", "Label": "VoiceCalls ThrottledCalls", "Timestamps": [], "Values": [] }, { "Id": "to_instance_packet_loss_rate", "Label": "Agent Voice WebRTC ToInstancePacketLossRate", "Timestamps": [], "Values": [] }] }
-// let completeFakeData = {
-//     "data": fakeData,
-//     "result": true
-// }
+let fakeData = { "MetricDataResults": [{ "Id": "calls_per_interval", "Label": "VoiceCalls CallsPerInterval", "Timestamps": ["12/11 10:36 AM", "12/11 2:36 PM"], "Values": [6.0, 2.0] }, { "Id": "missed_calls", "Label": "VoiceCalls MissedCalls", "Timestamps": [], "Values": [] }, { "Id": "calls_breaching_concurrency_quota", "Label": "VoiceCalls CallsBreachingConcurrencyQuota", "Timestamps": [], "Values": [] }, { "Id": "call_recording_upload_error", "Label": "CallRecordings CallRecordingUploadError", "Timestamps": [], "Values": [] }, { "Id": "chats_breaching_active_chat_quota", "Label": "Chats ChatsBreachingActiveChatQuota", "Timestamps": [], "Values": [] }, { "Id": "concurrent_active_chats", "Label": "Chats ConcurrentActiveChats", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowErrors", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_fatal_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowFatalErrors", "Timestamps": [], "Values": [] }, { "Id": "throttled_calls", "Label": "VoiceCalls ThrottledCalls", "Timestamps": [], "Values": [] }, { "Id": "to_instance_packet_loss_rate", "Label": "Agent Voice WebRTC ToInstancePacketLossRate", "Timestamps": [], "Values": [] }] }
+let completeFakeData = {
+    "data": fakeData,
+    "result": true
+}
 
-// sessionStorage.setItem("fakeMetricVisionData", JSON.stringify(completeFakeData))
+sessionStorage.setItem("fakeMetricVisionData", JSON.stringify(completeFakeData))
