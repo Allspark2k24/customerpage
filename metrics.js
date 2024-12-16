@@ -108,6 +108,34 @@ function cleanMetricName(metricName) {
     return cleanMetricName.join(' ');
 }
 
+
+function getLineGraphData(e) {
+    let metric = e.target.parentElement.id
+    let rawSessionStorageData = JSON.parse(sessionStorage.getItem("fakeMetricVisionData"))
+    let metricSessionStorageData = rawSessionStorageData.data.MetricDataResults;
+    let chartMetricData = []
+    for (let i = 0; i < metricSessionStorageData.length; i++) {
+        if (metricSessionStorageData[i]["Id"] === metric) {
+            let metricData = metricSessionStorageData[i];
+            for (let j = 0; j < metricData["Timestamps"].length; j++) {
+                let data = [];
+                data.push(metricData["Timestamps"][j], metricData["Values"][j])
+                chartMetricData.push(data)
+            }
+        }
+    }
+    // console.log(chartMetricData);
+    let graphData = {
+        // "container": Use metric and just do query selector `#${metric}`
+        "title": metric,
+        "xAxis": "Interval",
+        "yAxis": metric, //But will need to run cleanMetricName
+        "data": chartMetricData
+    }
+    createLineGraph(graphData)
+}
+
+
 function createTable(data) {
     let metricLabel = cleanMetricName(data.Id)
 
@@ -115,6 +143,7 @@ function createTable(data) {
     rowDiv.classList.add("row")
     let section = document.createElement("section")
     section.classList.add("col", "d-flex");
+    section.setAttribute("id", data.Id)
     let tableWrapper = document.createElement("div");
     tableWrapper.setAttribute("class", "table-responsive");
     let table = document.createElement("table");
@@ -157,6 +186,7 @@ function createTable(data) {
     tableIcon.classList.add("fa-solid", "fa-table", "fa-xl", "icon")
     let chartIcon = document.createElement("i")
     chartIcon.classList.add("fa-solid", "fa-chart-line", "fa-xl", "icon")
+    chartIcon.addEventListener("click", getLineGraphData)
     let gaugeIcon = document.createElement("i")
     gaugeIcon.classList.add("fa-solid", "fa-gauge", "fa-xl", "icon")
     section.appendChild(tableIcon)
@@ -193,6 +223,8 @@ function createTable(data) {
     //     dataRow.appendChild(row);
     // })
 }
+
+
 
 function newCreateTable(data) {
     let metricLabel = cleanMetricName(data.Id);
@@ -356,10 +388,86 @@ function enableCustomTimeframeButton() {
     }
 }
 
-let fakeData = { "MetricDataResults": [{ "Id": "calls_per_interval", "Label": "VoiceCalls CallsPerInterval", "Timestamps": ["12/11 10:36 AM", "12/11 2:36 PM"], "Values": [6.0, 2.0] }, { "Id": "missed_calls", "Label": "VoiceCalls MissedCalls", "Timestamps": [], "Values": [] }, { "Id": "calls_breaching_concurrency_quota", "Label": "VoiceCalls CallsBreachingConcurrencyQuota", "Timestamps": [], "Values": [] }, { "Id": "call_recording_upload_error", "Label": "CallRecordings CallRecordingUploadError", "Timestamps": [], "Values": [] }, { "Id": "chats_breaching_active_chat_quota", "Label": "Chats ChatsBreachingActiveChatQuota", "Timestamps": [], "Values": [] }, { "Id": "concurrent_active_chats", "Label": "Chats ConcurrentActiveChats", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowErrors", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_fatal_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowFatalErrors", "Timestamps": [], "Values": [] }, { "Id": "throttled_calls", "Label": "VoiceCalls ThrottledCalls", "Timestamps": [], "Values": [] }, { "Id": "to_instance_packet_loss_rate", "Label": "Agent Voice WebRTC ToInstancePacketLossRate", "Timestamps": [], "Values": [] }] }
+let fakeData = { "MetricDataResults": [{ "Id": "calls_per_interval", "Label": "VoiceCalls CallsPerInterval", "Timestamps": ["12/11 10:36 AM", "12/11 2:36 PM", "12/12 3:41 PM", "12/16 2:42 PM"], "Values": [6.0, 2.0, 4.0, 1.0] }, { "Id": "missed_calls", "Label": "VoiceCalls MissedCalls", "Timestamps": ["12/10 01:00 AM","12/10 04:00 AM", "12/10 06:32 AM"], "Values": [1.0,2.0,4.0] }, { "Id": "calls_breaching_concurrency_quota", "Label": "VoiceCalls CallsBreachingConcurrencyQuota", "Timestamps": [], "Values": [] }, { "Id": "call_recording_upload_error", "Label": "CallRecordings CallRecordingUploadError", "Timestamps": [], "Values": [] }, { "Id": "chats_breaching_active_chat_quota", "Label": "Chats ChatsBreachingActiveChatQuota", "Timestamps": [], "Values": [] }, { "Id": "concurrent_active_chats", "Label": "Chats ConcurrentActiveChats", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowErrors", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_fatal_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowFatalErrors", "Timestamps": [], "Values": [] }, { "Id": "throttled_calls", "Label": "VoiceCalls ThrottledCalls", "Timestamps": [], "Values": [] }, { "Id": "to_instance_packet_loss_rate", "Label": "Agent Voice WebRTC ToInstancePacketLossRate", "Timestamps": [], "Values": [] }] }
 let completeFakeData = {
     "data": fakeData,
     "result": true
 }
 
 sessionStorage.setItem("fakeMetricVisionData", JSON.stringify(completeFakeData))
+
+function createLineGraph(graphData) {
+    let container = document.querySelector(`#${graphData["title"]}`)
+    container.removeChild(container.firstElementChild);
+    let {data, title, xAxis, yAxis} = graphData;
+    let chart = anychart.line();
+    chart.data(data);
+    chart.title(cleanMetricName(title));
+    
+    // Step 5: Customize axes
+    chart.xAxis().title(xAxis);
+    // chart.yAxis().title(cleanMetricName(yAxis));
+
+    let flexDiv = document.createElement("div");
+    flexDiv.classList.add("flex-grow-1");
+    let flexDivId = `lineChart${title}`
+    flexDiv.setAttribute("id", flexDivId)
+    container.prepend(flexDiv);
+
+    // Step 6: Display the chart
+    chart.container(flexDivId);
+    chart.draw();
+    
+
+//Add new div with class flex-grow-1 like how it is in hard coded graph***
+    
+
+    // let chartElement = container.lastElementChild; // The newly added chart element (usually the last child)
+    // container.prepend(chartElement); // Move it to the first position
+    // chart.fit()
+}
+
+// let container = document.querySelector("#anychartContainer")
+// anychart.onDocumentReady(function() {
+//         // Step 1: Prepare your data
+//         var data = [
+//             ["12/10 01:00 AM", 5],
+//             ["12/10 02:00 AM", 19],
+//             ["12/10 03:00 AM", 7],
+//             ["12/11 04:00 AM", 15],
+//             ["12/11 05:00 AM", 9],
+//             ["12/12 06:00 AM", 12],
+//             ["12/13 07:00 AM", 3],
+//             ["12/13 08:00 AM", 20],
+//             ["12/13 09:00 AM", 14],
+//             ["12/14 10:00 AM", 11],
+//             ["12/14 11:00 AM", 6],
+//             ["12/15 12:00 PM", 17],
+//             ["12/15 01:00 PM", 10],
+//             ["12/15 02:00 PM", 8],
+//             ["12/15 03:00 PM", 13],
+//             ["12/15 04:00 PM", 2],
+//             ["12/16 05:00 PM", 18],
+//             ["12/16 06:00 PM", 4],
+//             ["12/16 07:00 PM", 1],
+//             ["12/16 08:00 PM", 16]
+//         ]
+        
+    
+//         // Step 2: Create the chart
+//         var chart = anychart.line();
+    
+//         // Step 3: Add data
+//         chart.data(data);
+    
+//         // Step 4: Customize chart title
+//         chart.title("Calls Per Interval");
+    
+//         // Step 5: Customize axes
+//         chart.xAxis().title("Interval");
+//         chart.yAxis().title("Number of Calls");
+    
+//         // Step 6: Display the chart
+//         chart.container("anychartContainer");
+//         chart.draw();
+// });
