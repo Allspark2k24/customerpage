@@ -52,13 +52,13 @@
                 <label for="customStartDate">Start Date</label>
                 <input type="date" id="customStartDate" oninput="enableCustomTimeframeButton()">
                 <label for="startTime">Start Time</label>
-                <input type="time" id="startTime">
+                <input type="time" id="startTime" oninput="enableCustomTimeframeButton()">
             </div>
             <div class="col d-flex">
                 <label for="customEndDate">End Date</label>
                 <input type="date" id="customEndDate" oninput="enableCustomTimeframeButton()">
                 <label for="endTime">End Time</label>
-                <input type="time" id="endTime">
+                <input type="time" id="endTime" oninput="enableCustomTimeframeButton()">
             </div>
             <div class="col" style="display: flex; justify-content: center;">
                 <button type="button" class="btn btn-secondary btn-block"  id="customDateTimeButton" onClick="submitCustomDateTimeframe()" disabled>Go</button>

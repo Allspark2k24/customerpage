@@ -10,37 +10,29 @@ def lambda_handler(event, context):
     
     awsARN = event['connectARN'] #ARN of the AWS Connect instance passed in via parameter
     contactFlowARN = event['contactFlowARN'] #ARN of AWS Connect specific contact flow passed in via parameter
-    
-    if "timeframeLength" in event: #If parameter passed in, use this, if not, initialize to empty string. For certain start time to present
-        timeframeLength = event['timeframeLength']
+
+    if "customStartTimeandDate" in event:
+        rawStartDate = event["customStartTimeandDate"]
+        customStartTimeandDate = rawStartDate.replace("_", " ")
     else:
-        timeframeLength = "";
-    if "timeframeUnit" in event: #If parameter passed in, use this, if not, initialize to empty string. For certain start time to present
-        timeframeUnit = event['timeframeUnit']
-    else:
-        timeframeUnit = "";
-    if "customStartTime" in event: #If parameter passed in, use this, if not, initialize to empty string. For certain start and end time
-        customStartTime = event['customStartTime']
-    else:
-        customStartTime = "";
-    if "customEndTime" in event: #If parameter passed in, use this, if not, initialize to empty string. For certain start and end time
-        customEndTime = event['customEndTime']
-    else:
-        customEndTime = "";
-    
+        customStartTimeandDate = ''
+    if "customEndTimeandDate" in event:
+        rawEndDate = event["customEndTimeandDate"]
+        customEndTimeandDate = rawEndDate.replace("_", " ")
+    else: customEndTimeandDate = ''
 
     # Define the time range
     end_time = datetime.now() #End time defaults to present
-    if timeframeLength and timeframeUnit: #If want to use preset start time and current end time, use this block
-        dateArgs = {timeframeUnit: int(timeframeLength)}
-        start_time = end_time - timedelta(**dateArgs)
-    else:
-        start_time = end_time - timedelta(weeks=2) #Default is metrics for last 2 weeks
-    if customStartTime and customEndTime: #If want to use custom start and end times, use this block
-        start_time = datetime.strptime(customStartTime, "%Y-%m-%d")
-        end_time = datetime.strptime(customEndTime, "%Y-%m-%d")
+    start_time = end_time - timedelta(weeks=2) #Default is metrics for last 2 weeks
     
-
+    if customStartTimeandDate and customEndTimeandDate: #If want to use custom start and end times, use this block
+        start_time_local = datetime.strptime(customStartTimeandDate, "%H:%M %Y-%m-%d")
+        end_time_local = datetime.strptime(customEndTimeandDate, "%H:%M %Y-%m-%d")
+        start_time_zone = start_time_local.replace(tzinfo=ZoneInfo("America/Chicago"))
+        end_time_zone = end_time_local.replace(tzinfo=ZoneInfo("America/Chicago"))
+        start_time = start_time_zone.astimezone(ZoneInfo("UTC"))
+        end_time = end_time_zone.astimezone(ZoneInfo("UTC"))
+    
     # Define the parameters for the get_metric_data call
     params = {
         'StartTime': start_time, #Start time for metric data

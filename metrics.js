@@ -9,68 +9,19 @@ async function getARNQueryParams() {
     }
 }
 
-async function initialFetchCloudWatchData() {
-    let baseURL = "https://yfa9htwb2c.execute-api.us-east-1.amazonaws.com/testing/metrics";
-    let arn = await getARNQueryParams();
-    let fullURL = `${baseURL}/?connectARN=${arn["connectARN"]}&contactFlowARN=${arn["contactFlowARN"]}`;
-    try {
-        // let hash = window.location.hash;
-        // let token = hash.split("access_token=")[1].split("&")[0];
-        // console.log(token)
-        // console.log(hash)
-        let token = sessionStorage.getItem("MetricVisionAccessToken");
-        let response = await fetch(fullURL, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        if (!response.ok) {
-            return {
-                "errorMessage": response,
-                "result": false
-            }
-        } else {
-            let cloudWatchData = await response.json();
-            sessionStorage.setItem("MetricVisionData", cloudWatchData)
-            return {
-                "data": cloudWatchData,
-                "result": true
-            }
-        }
-    } catch (err) {
-        return {
-            "errorMessage": err,
-            "result": false
-        }
-    }
-
-}
-
-async function customTimeFetchCloudWatchData(timeframeLength, timeframeUnit, customStartTime, customEndTime) {
-    let baseURL = "https://yfa9htwb2c.execute-api.us-east-1.amazonaws.com/testing/metrics";
-    let timeframeLengthParam = '';
-    let timeframeUnitParam = '';
+async function customTimeFetchCloudWatchData(customStartTimeandDate, customEndTimeandDate) {
+    // let baseURL = "https://yfa9htwb2c.execute-api.us-east-1.amazonaws.com/testing/metrics";
+    let baseURL = "https://440wcvfz4j.execute-api.us-east-1.amazonaws.com/testing/metrics";
     let customStartTimeParam = '';
     let customEndTimeParam = '';
-    if (timeframeLength && timeframeUnit) {
-        timeframeLengthParam = `/?timeframeLength=${timeframeLength}&`;
-        timeframeUnitParam = `timeframeUnit=${timeframeUnit}`;
-    }
-    if (customStartTime && customEndTime) {
-        customStartTimeParam = `/?customStartTime=${customStartTime}&`;
-        customEndTimeParam = `customEndTime=${customEndTime}`;
+    if (customStartTimeandDate && customEndTimeandDate) {
+        customStartTimeParam = `&customStartTimeandDate=${customStartTimeandDate}`;
+        customEndTimeParam = `&customEndTimeandDate=${customEndTimeandDate}`;
     }
 
     let arn = await getARNQueryParams();
-    let paramURL = `${baseURL}${timeframeLengthParam}${timeframeUnitParam}${customStartTimeParam}${customEndTimeParam}&connectARN=${arn["connectARN"]}&contactFlowARN=${arn["contactFlowARN"]}`;
-    // let paramURL = baseURL + timeframeLengthParam + timeframeUnitParam;
+    let paramURL = `${baseURL}/?connectARN=${arn["connectARN"]}&contactFlowARN=${arn["contactFlowARN"]}${customStartTimeParam}${customEndTimeParam}`;
     try {
-        // let response = await fetch(paramURL);
-        // let hash = window.location.hash;
-        // let token = hash.split("access_token=")[1].split("&")[0];
-        // console.log(token)
-        // console.log(hash)
         let token = sessionStorage.getItem("MetricVisionAccessToken");
         let response = await fetch(paramURL, {
             headers: {
@@ -86,7 +37,6 @@ async function customTimeFetchCloudWatchData(timeframeLength, timeframeUnit, cus
             }
         } else {
             let cloudWatchData = await response.json();
-            // console.log(cloudWatchData)
             sessionStorage.setItem("MetricVisionData", cloudWatchData)
             return {
                 "data": cloudWatchData,
@@ -113,9 +63,9 @@ async function displayMetricTableData() {
     loadingModal.innerHTML = "loading . . .";
     let sectionHeader = document.querySelector(".loading");
     sectionHeader.append(loadingModal);
-    // let data = await initialFetchCloudWatchData();
-    let data = JSON.parse(sessionStorage.getItem("fakeMetricVisionData"))
-    console.log(data)
+    let data = await customTimeFetchCloudWatchData("", "");
+    // let data = JSON.parse(sessionStorage.getItem("fakeMetricVisionData"))
+    // console.log(data)
     if (!data.result) {
         sectionHeader.removeChild(loadingModal);
         let error = document.createElement("p");
@@ -123,7 +73,7 @@ async function displayMetricTableData() {
         sectionHeader.appendChild(error);
         return
     } else {
-        // sessionStorage.setItem("MetricVisionData", JSON.stringify(data.data.MetricDataResults))
+        sessionStorage.setItem("MetricVisionData", JSON.stringify(data.data.MetricDataResults))
         sectionHeader.removeChild(loadingModal);
         let metricDataResults = data.data.MetricDataResults.length;
         for (let i = 0; i < metricDataResults; i++) {
@@ -181,7 +131,6 @@ function hideOtherCharts(e) {
 
 function createGauge(data, container) {
     // create data set on our data
-    // console.log(data)
     let values = data["Values"]
     let min, max, avg, sum;
     if (values.length === 0) {
@@ -240,7 +189,6 @@ function createGauge(data, container) {
     .middleWidth('5%')
     
     // draw the chart
-    // gauge.container("gauge_calls_per_interval_container").draw();
     let section = document.createElement("section");
     section.classList.add("flex-grow-1", "d-flex", "justify-content-around", "flex-wrap", "align-items-center");
     section.setAttribute("Id", `gauge_${data.Id}`);
@@ -298,10 +246,9 @@ function createLineGraphNew(data, container) {
         chartMetricData.push(chartData)
     }
     let graphData = {
-        // "container": Use metric and just do query selector `#${metric}`
         "title": metric,
         "xAxis": "Interval",
-        "yAxis": metric, //But will need to run cleanMetricName
+        "yAxis": metric,
         "data": chartMetricData
     }
     chartLineGraph(graphData, container)
@@ -315,7 +262,6 @@ function chartLineGraph(graphData, container) {
     
     // Step 5: Customize axes
     chart.xAxis().title(xAxis);
-    // chart.yAxis().title(cleanMetricName(yAxis));
 
     let flexDiv = document.createElement("section");
     flexDiv.classList.add("flex-grow-1");
@@ -372,46 +318,19 @@ function createTable(data, container) {
     container.appendChild(tableWrapper);
 }
 
-// async function submitCustomTimeframe() {
-//     let timeframeLength = document.querySelector("#timeframeLength").value;
-//     let timeframeUnit = document.querySelector("#timeframeUnit").value.toLowerCase();
-//     let loadingModal = document.createElement("p");
-//     loadingModal.innerHTML = "loading . . .";
-//     let sectionHeader = document.querySelector(".loading");
-//     sectionHeader.append(loadingModal);
-//     // let data = await customTimeFetchCloudWatchData(timeframeLength, timeframeUnit, "", "");
-//     let data = JSON.parse(sessionStorage.getItem("fakeMetricVisionData"))
-//     if (!data.result) {
-//         sectionHeader.removeChild(loadingModal);
-//         let error = document.createElement("p");
-//         error.innerHTML = `Error: ${data.errorMessage.status}`;
-//         sectionHeader.appendChild(error);
-//         return
-//     } else {
-//         // sessionStorage.setItem("MetricVisionData", JSON.stringify(data.data.MetricDataResults))
-//         sectionHeader.removeChild(loadingModal);
-//         let results = document.querySelector("#results");
-//         results.remove();
-//         let newResults = document.querySelector("#dataTables");
-//         let section = document.createElement("div");
-//         section.setAttribute("id", "results");
-//         newResults.appendChild(section);
-//         let metricDataResults = data.data.MetricDataResults.length;
-//         for (let i = 0; i < metricDataResults; i++) {
-//             createTableLineGauge(data.data.MetricDataResults[i])
-//         }
-//     }
-
-// }
 async function submitCustomDateTimeframe() {
     let startDate = document.querySelector("#customStartDate").value
     let endDate = document.querySelector("#customEndDate").value
+    let startTime = document.querySelector("#startTime").value
+    let endTime = document.querySelector("#endTime").value
+    let startTimeandDate = `${startTime}_${startDate}`;
+    let endTimeandDate = `${endTime}_${endDate}`;
     let loadingModal = document.createElement("p");
     loadingModal.innerHTML = "loading . . .";
     let sectionHeader = document.querySelector(".loading");
     sectionHeader.append(loadingModal);
-    // let data = await customTimeFetchCloudWatchData("", "", startDate, endDate);
-    let data = JSON.parse(sessionStorage.getItem("fakeMetricVisionData"))
+    let data = await customTimeFetchCloudWatchData(startTimeandDate, endTimeandDate);
+    // let data = JSON.parse(sessionStorage.getItem("fakeMetricVisionData"))
     if (!data.result) {
         sectionHeader.removeChild(loadingModal);
         let error = document.createElement("p");
@@ -419,7 +338,7 @@ async function submitCustomDateTimeframe() {
         sectionHeader.appendChild(error);
         return
     } else {
-        // sessionStorage.setItem("MetricVisionData", JSON.stringify(data.data.MetricDataResults));
+        sessionStorage.setItem("MetricVisionData", JSON.stringify(data.data.MetricDataResults));
         sectionHeader.removeChild(loadingModal);
         let results = document.querySelector("#results");
         results.remove();
@@ -434,24 +353,13 @@ async function submitCustomDateTimeframe() {
     }
 }
 
-// function enableButton() {
-//     let button = document.querySelector("#customTimeButton")
-//     let inputValue = document.querySelector("#timeframeLength").value;
-//     if (inputValue && inputValue >= 1 && inputValue <= 100) {
-//         button.disabled = false;
-//         button.classList.remove("btn-secondary")
-//         button.classList.add("btn-primary")
-//     } else {
-//         button.disabled = true;
-//         button.classList.remove("btn-primary")
-//         button.classList.add("btn-secondary")
-//     }
-// }
 function enableCustomTimeframeButton() {
     let customTimeButton = document.querySelector("#customDateTimeButton")
     let startDate = document.querySelector("#customStartDate").value
     let endDate = document.querySelector("#customEndDate").value
-    if (startDate && endDate) {
+    let startTime = document.querySelector("#startTime").value
+    let endTime = document.querySelector("#endTime").value
+    if (startDate && endDate && startTime && endTime) {
         customTimeButton.disabled = false;
         customTimeButton.classList.remove("btn-secondary")
         customTimeButton.classList.add("btn-primary")
@@ -462,19 +370,82 @@ function enableCustomTimeframeButton() {
     }
 }
 
-//For testing purposes, use fake data to simulate real data when working in test environment, because not authenticated with Cognito
-
-let fakeData = { "MetricDataResults": [{ "Id": "calls_per_interval", "Label": "VoiceCalls CallsPerInterval", "Timestamps": ["12/11 10:36 AM", "12/11 2:36 PM", "12/12 3:41 PM", "12/16 2:42 PM"], "Values": [6.0, 2.0, 4.0, 1.0] }, { "Id": "missed_calls", "Label": "VoiceCalls MissedCalls", "Timestamps": ["12/10 01:00 AM","12/10 04:00 AM", "12/10 06:32 AM"], "Values": [1.0,2.0,4.0] }, { "Id": "calls_breaching_concurrency_quota", "Label": "VoiceCalls CallsBreachingConcurrencyQuota", "Timestamps": [], "Values": [] }, { "Id": "call_recording_upload_error", "Label": "CallRecordings CallRecordingUploadError", "Timestamps": [], "Values": [] }, { "Id": "chats_breaching_active_chat_quota", "Label": "Chats ChatsBreachingActiveChatQuota", "Timestamps": [], "Values": [] }, { "Id": "concurrent_active_chats", "Label": "Chats ConcurrentActiveChats", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowErrors", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_fatal_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowFatalErrors", "Timestamps": [], "Values": [] }, { "Id": "throttled_calls", "Label": "VoiceCalls ThrottledCalls", "Timestamps": [], "Values": [] }, { "Id": "to_instance_packet_loss_rate", "Label": "Agent Voice WebRTC ToInstancePacketLossRate", "Timestamps": [], "Values": [] }] }
-let completeFakeData = {
-    "data": fakeData,
-    "result": true
+function displayTimeandDates() {
+    let startTime = document.querySelector("#startTime");
+    let endTime = document.querySelector("#endTime");
+    let startDate = document.querySelector("#customStartDate");
+    let endDate = document.querySelector("#customEndDate");
+    let { currentDate, currentTime, twoWeeksAgoDate, twoWeeksAgoTime } = getFormattedDates();
+    startTime.value = twoWeeksAgoTime;
+    startDate.value = twoWeeksAgoDate;
+    endTime.value = currentTime;
+    endDate.value = currentDate;
 }
-
-sessionStorage.setItem("fakeMetricVisionData", JSON.stringify(completeFakeData))
+function getFormattedDates() {
+    // Get the current date
+    const currentDate = new Date();
+  
+    // Helper function to format date to YYYY-MM-DD
+    function formatDate(date) {
+      const year = date.getFullYear();
+      let month = date.getMonth() + 1; // Months are 0-based
+      let day = date.getDate();
+  
+      // Pad month and day with leading zeros if necessary
+      month = month < 10 ? '0' + month : month;
+      day = day < 10 ? '0' + day : day;
+  
+      return `${year}-${month}-${day}`;
+    }
+  
+    // Helper function to format time to HH:MM
+    function formatTime(date) {
+      let hours = date.getHours();
+      let minutes = date.getMinutes();
+  
+      // Pad hours and minutes with leading zeros if necessary
+      hours = hours < 10 ? '0' + hours : hours;
+      minutes = minutes < 10 ? '0' + minutes : minutes;
+  
+      return `${hours}:${minutes}`;
+    }
+  
+    // Get the current formatted date and time
+    const currentFormattedDate = formatDate(currentDate);
+    const currentFormattedTime = formatTime(currentDate);
+  
+    // Get the date 2 weeks ago
+    const twoWeeksAgoDate = new Date(currentDate);
+    twoWeeksAgoDate.setDate(currentDate.getDate() - 14);
+  
+    // Get the formatted date and time for 2 weeks ago
+    const twoWeeksAgoFormattedDate = formatDate(twoWeeksAgoDate);
+    const twoWeeksAgoFormattedTime = formatTime(twoWeeksAgoDate);
+  
+    return {
+      currentDate: currentFormattedDate,
+      currentTime: currentFormattedTime,
+      twoWeeksAgoDate: twoWeeksAgoFormattedDate,
+      twoWeeksAgoTime: twoWeeksAgoFormattedTime
+    };
+}
 
 document.addEventListener("DOMContentLoaded", function () {
     displayMetricTableData();
+    displayTimeandDates();
 });
+  
+//For testing purposes, use fake data to simulate real data when working in test environment, because not authenticated with Cognito
+
+// let fakeData = { "MetricDataResults": [{ "Id": "calls_per_interval", "Label": "VoiceCalls CallsPerInterval", "Timestamps": ["12/11 10:36 AM", "12/11 2:36 PM", "12/12 3:41 PM", "12/16 2:42 PM"], "Values": [6.0, 2.0, 4.0, 1.0] }, { "Id": "missed_calls", "Label": "VoiceCalls MissedCalls", "Timestamps": ["12/10 01:00 AM","12/10 04:00 AM", "12/10 06:32 AM"], "Values": [1.0,2.0,4.0] }, { "Id": "calls_breaching_concurrency_quota", "Label": "VoiceCalls CallsBreachingConcurrencyQuota", "Timestamps": [], "Values": [] }, { "Id": "call_recording_upload_error", "Label": "CallRecordings CallRecordingUploadError", "Timestamps": [], "Values": [] }, { "Id": "chats_breaching_active_chat_quota", "Label": "Chats ChatsBreachingActiveChatQuota", "Timestamps": [], "Values": [] }, { "Id": "concurrent_active_chats", "Label": "Chats ConcurrentActiveChats", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowErrors", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_fatal_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowFatalErrors", "Timestamps": [], "Values": [] }, { "Id": "throttled_calls", "Label": "VoiceCalls ThrottledCalls", "Timestamps": [], "Values": [] }, { "Id": "to_instance_packet_loss_rate", "Label": "Agent Voice WebRTC ToInstancePacketLossRate", "Timestamps": [], "Values": [] }] }
+// let completeFakeData = {
+//     "data": fakeData,
+//     "result": true
+// }
+
+// sessionStorage.setItem("fakeMetricVisionData", JSON.stringify(completeFakeData))
+  
+
 
 
 
