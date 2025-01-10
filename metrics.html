@@ -60,6 +60,13 @@
                 <label for="endTime">End Time</label>
                 <input type="time" id="endTime" oninput="enableCustomTimeframeButton()">
             </div>
+            <div class="col d-flex dropdown">
+                <button class="btn btn-info dropdown-toggle" type="button" id="timezoneButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Local Timezone</button>
+                  <div class="dropdown-menu" aria-labelledby="timezoneButton">
+                    <button class="dropdown-item"  type="button" onclick="dropdownChoice(event)">Local Timezone</button>
+                    <button class="dropdown-item" type="button" onclick="dropdownChoice(event)">UTC Timezone</button>
+                  </div>
+            </div>
             <div class="col" style="display: flex; justify-content: center;">
                 <button type="button" class="btn btn-secondary btn-block"  id="customDateTimeButton" onClick="submitCustomDateTimeframe()" disabled>Go</button>
             </div>
