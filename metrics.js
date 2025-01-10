@@ -138,6 +138,11 @@ function createGauge(data, container) {
         max = 1;
         avg = 0;
         sum = 0;
+    } else if (values.every(value => value === values[0])) {
+        min = values[0] - 1;
+        max = values[0] +1;
+        sum = values.reduce((acc, num) => acc + num, 0);
+        avg = parseFloat((sum / values.length).toFixed(2));
     } else {
         min = Math.min(...values);
         max = Math.max(...values);
