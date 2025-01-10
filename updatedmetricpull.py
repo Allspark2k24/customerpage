@@ -334,11 +334,6 @@ def lambda_handler(event, context):
               
     allMergedData = list(mergedData.values()) #Get all merged metric data as a list
 
-    #Loop through for every metric its timestamps and values and reverse them, because cloudwatch by default gives values in reverse chronological order
-    # for metric in allMergedData:
-    #     metric['Timestamps'] = metric["Timestamps"][::-1]
-    #     metric['Values'] = metric['Values'][::-1]
-
     # Return the merged metric data as the final result of the Lambda function
     return {
         "MetricDataResults": allMergedData # Return the merged metric data
