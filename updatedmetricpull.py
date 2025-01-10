@@ -11,32 +11,27 @@ def lambda_handler(event, context):
     awsARN = event['connectARN'] #ARN of the AWS Connect instance passed in via parameter
     contactFlowARN = event['contactFlowARN'] #ARN of AWS Connect specific contact flow passed in via parameter
 
-    if "customStartTimeandDate" in event:
-        rawStartDate = event["customStartTimeandDate"]
-        customStartTimeandDate = rawStartDate.replace("_", " ")
-    else:
-        customStartTimeandDate = ''
-    if "customEndTimeandDate" in event:
-        rawEndDate = event["customEndTimeandDate"]
-        customEndTimeandDate = rawEndDate.replace("_", " ")
-    else: customEndTimeandDate = ''
+    customStartTimeandDate = event["customStartTimeandDate"]
+    if customStartTimeandDate != "":
+        customStartTimeandDate = datetime.fromisoformat(customStartTimeandDate.replace("Z", "+00:00"))
+    
+    customEndTimeandDate = event["customEndTimeandDate"]
+    if customEndTimeandDate != "":
+        customEndTimeandDate = datetime.fromisoformat(customStartTimeandDate.replace("Z", "+00:00"))
 
     # Define the time range
     end_time = datetime.now() #End time defaults to present
     start_time = end_time - timedelta(weeks=2) #Default is metrics for last 2 weeks
     
     if customStartTimeandDate and customEndTimeandDate: #If want to use custom start and end times, use this block
-        start_time_local = datetime.strptime(customStartTimeandDate, "%H:%M %Y-%m-%d")
-        end_time_local = datetime.strptime(customEndTimeandDate, "%H:%M %Y-%m-%d")
-        start_time_zone = start_time_local.replace(tzinfo=ZoneInfo("America/Chicago"))
-        end_time_zone = end_time_local.replace(tzinfo=ZoneInfo("America/Chicago"))
-        start_time = start_time_zone.astimezone(ZoneInfo("UTC"))
-        end_time = end_time_zone.astimezone(ZoneInfo("UTC"))
+        start_time = customStartTimeandDate
+        end_time = customEndTimeandDate
     
     # Define the parameters for the get_metric_data call
     params = {
         'StartTime': start_time, #Start time for metric data
         'EndTime': end_time, #End time for metric data
+        'ScanBy': 'TimestampAscending',
         'MetricDataQueries': [ #List of metric data queries to perform
             {
                 'Id': 'calls_per_interval',  #Metric query for calls per interval
@@ -316,7 +311,7 @@ def lambda_handler(event, context):
     #Format timestamps into a more readable format (e.g. "MM/DD HH:MM Am/Pm")
     for element in allDataResponse: #Iterate through each data response
         for metric in element['MetricDataResults']: #Iterate through each metric result
-            metric['Timestamps'] = [value.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("US/Central")).strftime("%m/%d %-I:%M %p") for value in metric['Timestamps']] #Format time stamp by converting from UTC to US Central, then formatting in readable MM/DD HH:MM AM/PM
+            metric['Timestamps'] = [value.strftime("%m/%d/%Y %-I:%M %p") for value in metric['Timestamps']] #Format time stamp in readable MM/DD/YYYY HH:MM AM/PM
           
     #Merge data from all responses into a single dictionary for each metric
 
@@ -340,9 +335,9 @@ def lambda_handler(event, context):
     allMergedData = list(mergedData.values()) #Get all merged metric data as a list
 
     #Loop through for every metric its timestamps and values and reverse them, because cloudwatch by default gives values in reverse chronological order
-    for metric in allMergedData:
-        metric['Timestamps'] = metric["Timestamps"][::-1]
-        metric['Values'] = metric['Values'][::-1]
+    # for metric in allMergedData:
+    #     metric['Timestamps'] = metric["Timestamps"][::-1]
+    #     metric['Values'] = metric['Values'][::-1]
 
     # Return the merged metric data as the final result of the Lambda function
     return {

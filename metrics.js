@@ -10,8 +10,8 @@ async function getARNQueryParams() {
 }
 
 async function customTimeFetchCloudWatchData(customStartTimeandDate, customEndTimeandDate) {
-    // let baseURL = "https://yfa9htwb2c.execute-api.us-east-1.amazonaws.com/testing/metrics";
-    let baseURL = "https://440wcvfz4j.execute-api.us-east-1.amazonaws.com/testing/metrics";
+    let baseURL = "https://yfa9htwb2c.execute-api.us-east-1.amazonaws.com/testing/metrics";
+    // let baseURL = "https://440wcvfz4j.execute-api.us-east-1.amazonaws.com/testing/metrics";
     let customStartTimeParam = '';
     let customEndTimeParam = '';
     if (customStartTimeandDate && customEndTimeandDate) {
@@ -92,8 +92,8 @@ function createTableLineGauge(data) {
     let results = document.querySelector("#results");
     rowDiv.appendChild(section)
     results.appendChild(rowDiv)
-    createTable(data, section)
     createLineGraphNew(data, section)
+    createTable(data, section)
     createGauge(data, section)
     createIcons(section)
     
@@ -109,11 +109,11 @@ function createIcons(container) {
     chartIcon.addEventListener("click", hideOtherCharts)
     tableIcon.addEventListener("click", hideOtherCharts)
     gaugeIcon.addEventListener("click", hideOtherCharts)
-    container.append(tableIcon, chartIcon, gaugeIcon);
+    container.append(chartIcon, tableIcon, gaugeIcon);
 }
-function hideOtherCharts(e) {
-    let target = e.target.classList[0].replace("Chart",'');
-    let parentNodeList = e.target.parentElement.childNodes;
+function hideOtherCharts(event) {
+    let target = event.target.classList[0].replace("Chart",'');
+    let parentNodeList = event.target.parentElement.childNodes;
     let section = [];
     for (i = 0; i < parentNodeList.length; i++) {
         if (parentNodeList[i].nodeName === "SECTION") {
@@ -267,7 +267,7 @@ function chartLineGraph(graphData, container) {
     flexDiv.classList.add("flex-grow-1");
     let flexDivId = `lineChart_${title}`;
     flexDiv.setAttribute("id", flexDivId);
-    flexDiv.setAttribute("style", "display: none !important");
+    // flexDiv.setAttribute("style", "display: none !important");
     
 
     // Step 6: Display the chart
@@ -315,6 +315,7 @@ function createTable(data, container) {
         columnRow.appendChild(row);
     })
     table.appendChild(tableBody);
+    tableWrapper.setAttribute("style", "display: none !important");
     container.appendChild(tableWrapper);
 }
 
@@ -323,13 +324,18 @@ async function submitCustomDateTimeframe() {
     let endDate = document.querySelector("#customEndDate").value
     let startTime = document.querySelector("#startTime").value
     let endTime = document.querySelector("#endTime").value
-    let startTimeandDate = `${startTime}_${startDate}`;
-    let endTimeandDate = `${endTime}_${endDate}`;
+    let timezoneChoice = document.querySelector("#timezoneButton").innerHTML
+    let localTime = false;
+    if (timezoneChoice === "Local Timezone") {
+        localTime = true;
+    }
+    let startUTC = localDateToUTC(startDate, startTime);
+    let endUTC = localDateToUTC(endDate, endTime);
     let loadingModal = document.createElement("p");
     loadingModal.innerHTML = "loading . . .";
     let sectionHeader = document.querySelector(".loading");
     sectionHeader.append(loadingModal);
-    let data = await customTimeFetchCloudWatchData(startTimeandDate, endTimeandDate);
+    let data = await customTimeFetchCloudWatchData(startUTC, endUTC);
     // let data = JSON.parse(sessionStorage.getItem("fakeMetricVisionData"))
     if (!data.result) {
         sectionHeader.removeChild(loadingModal);
@@ -338,6 +344,27 @@ async function submitCustomDateTimeframe() {
         sectionHeader.appendChild(error);
         return
     } else {
+        if (localTime) {
+            for (let i = 0; i < data.data.MetricDataResults.length; i ++) {
+                if (data.data.MetricDataResults[i]['Timestamps'].length > 0) {
+                    let timestampsArray = data.data.MetricDataResults[i]['Timestamps']
+                    for (let j = 0; j < timestampsArray.length; j ++) {
+                        let formatter = new Intl.DateTimeFormat("en-US", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: true,
+                        });
+                        let UTCDate = timestampsArray[j] + " UTC";
+                        let UTCDateObject = new Date(UTCDate);
+                        let formattedDate = formatter.format(UTCDateObject);
+                        timestampsArray[j] = formattedDate;
+                    }
+                }
+            }
+        }
         sessionStorage.setItem("MetricVisionData", JSON.stringify(data.data.MetricDataResults));
         sectionHeader.removeChild(loadingModal);
         let results = document.querySelector("#results");
@@ -430,6 +457,20 @@ function getFormattedDates() {
     };
 }
 
+function dropdownChoice(event) {
+    let dropdownButtonText = document.querySelector("#timezoneButton")
+    dropdownButtonText.innerHTML = event.target.innerHTML
+}
+
+function localDateToUTC(rawDateInput, rawTimeInput) {
+    let [year, month, day] = rawDateInput.split("-");
+    month = parseInt(month) - 1;
+    let [hours, minutes] = rawTimeInput.split(":");
+    let UTCDate = new Date(year, month, day, hours, minutes).toISOString()
+    return UTCDate;
+}
+
+
 document.addEventListener("DOMContentLoaded", function () {
     displayMetricTableData();
     displayTimeandDates();
@@ -437,7 +478,7 @@ document.addEventListener("DOMContentLoaded", function () {
   
 //For testing purposes, use fake data to simulate real data when working in test environment, because not authenticated with Cognito
 
-// let fakeData = { "MetricDataResults": [{ "Id": "calls_per_interval", "Label": "VoiceCalls CallsPerInterval", "Timestamps": ["12/11 10:36 AM", "12/11 2:36 PM", "12/12 3:41 PM", "12/16 2:42 PM"], "Values": [6.0, 2.0, 4.0, 1.0] }, { "Id": "missed_calls", "Label": "VoiceCalls MissedCalls", "Timestamps": ["12/10 01:00 AM","12/10 04:00 AM", "12/10 06:32 AM"], "Values": [1.0,2.0,4.0] }, { "Id": "calls_breaching_concurrency_quota", "Label": "VoiceCalls CallsBreachingConcurrencyQuota", "Timestamps": [], "Values": [] }, { "Id": "call_recording_upload_error", "Label": "CallRecordings CallRecordingUploadError", "Timestamps": [], "Values": [] }, { "Id": "chats_breaching_active_chat_quota", "Label": "Chats ChatsBreachingActiveChatQuota", "Timestamps": [], "Values": [] }, { "Id": "concurrent_active_chats", "Label": "Chats ConcurrentActiveChats", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowErrors", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_fatal_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowFatalErrors", "Timestamps": [], "Values": [] }, { "Id": "throttled_calls", "Label": "VoiceCalls ThrottledCalls", "Timestamps": [], "Values": [] }, { "Id": "to_instance_packet_loss_rate", "Label": "Agent Voice WebRTC ToInstancePacketLossRate", "Timestamps": [], "Values": [] }] }
+// let fakeData = { "MetricDataResults": [{ "Id": "calls_per_interval", "Label": "VoiceCalls CallsPerInterval", "Timestamps": ["12/11/2024 10:36 AM", "12/11/2024 2:36 PM", "12/12/2024 3:41 PM", "12/16/2024 2:42 PM"], "Values": [6.0, 2.0, 4.0, 1.0] }, { "Id": "missed_calls", "Label": "VoiceCalls MissedCalls", "Timestamps": ["12/10/2024 01:00 AM","12/10/2024 04:00 AM", "12/10/2024 06:32 AM"], "Values": [1.0,2.0,4.0] }, { "Id": "calls_breaching_concurrency_quota", "Label": "VoiceCalls CallsBreachingConcurrencyQuota", "Timestamps": [], "Values": [] }, { "Id": "call_recording_upload_error", "Label": "CallRecordings CallRecordingUploadError", "Timestamps": [], "Values": [] }, { "Id": "chats_breaching_active_chat_quota", "Label": "Chats ChatsBreachingActiveChatQuota", "Timestamps": [], "Values": [] }, { "Id": "concurrent_active_chats", "Label": "Chats ConcurrentActiveChats", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowErrors", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_fatal_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowFatalErrors", "Timestamps": [], "Values": [] }, { "Id": "throttled_calls", "Label": "VoiceCalls ThrottledCalls", "Timestamps": [], "Values": [] }, { "Id": "to_instance_packet_loss_rate", "Label": "Agent Voice WebRTC ToInstancePacketLossRate", "Timestamps": [], "Values": [] }] }
 // let completeFakeData = {
 //     "data": fakeData,
 //     "result": true
