@@ -92,11 +92,16 @@ function createTableLineGauge(data) {
     let results = document.querySelector("#results");
     rowDiv.appendChild(section)
     results.appendChild(rowDiv)
+    if (data.Id.includes("percentage")) {
+        data.Values.forEach(function (value, index) {
+            data.Values[index] = Math.floor(value * 100)
+        })
+    }
     createLineGraphNew(data, section)
     createTable(data, section)
     createGauge(data, section)
     createIcons(section)
-    
+
 }
 
 function createIcons(container) {
@@ -105,14 +110,14 @@ function createIcons(container) {
     let chartIcon = document.createElement("i")
     chartIcon.classList.add("lineChart", "fa-solid", "fa-chart-line", "fa-xl", "icon")
     let gaugeIcon = document.createElement("i")
-    gaugeIcon.classList.add("gaugeChart","fa-solid", "fa-gauge", "fa-xl", "icon")
+    gaugeIcon.classList.add("gaugeChart", "fa-solid", "fa-gauge", "fa-xl", "icon")
     chartIcon.addEventListener("click", hideOtherCharts)
     tableIcon.addEventListener("click", hideOtherCharts)
     gaugeIcon.addEventListener("click", hideOtherCharts)
     container.append(chartIcon, tableIcon, gaugeIcon);
 }
 function hideOtherCharts(event) {
-    let target = event.target.classList[0].replace("Chart",'');
+    let target = event.target.classList[0].replace("Chart", '');
     let parentNodeList = event.target.parentElement.childNodes;
     let section = [];
     for (i = 0; i < parentNodeList.length; i++) {
@@ -133,22 +138,47 @@ function createGauge(data, container) {
     // create data set on our data
     let values = data["Values"]
     let min, max, avg, sum;
-    if (values.length === 0) {
+    if (data.Id.includes("percentage")) {
         min = 0;
-        max = 1;
-        avg = 0;
-        sum = 0;
-    } else if (values.every(value => value === values[0])) {
-        min = Math.min(0, values[0]);
-        max = values[0] +1;
-        sum = values.reduce((acc, num) => acc + num, 0);
-        avg = parseFloat((sum / values.length).toFixed(2));
+        max = 100;
+        sum = "N/A"
+        if (values.length === 0) {
+            avg = 0;
+        } else if (values.every(value => value === values[0])) {
+            avg = parseFloat(((values.reduce((acc, num) => acc + num, 0)) / values.length).toFixed(2));
+        } else {
+            avg = parseFloat(((values.reduce((acc, num) => acc + num, 0)) / values.length).toFixed(2));
+        }
+    } else if (data.Id.includes("packet_loss")){
+        min = 0;
+        max = 100;
+        sum = "N/A";
+        if (values.length === 0) {
+            avg = 0;
+        } else if (values.every(value => value === values[0])) {
+            avg = parseFloat(((values.reduce((acc, num) => acc + num, 0)) / values.length).toFixed(2));
+        } else {
+            avg = parseFloat(((values.reduce((acc, num) => acc + num, 0)) / values.length).toFixed(2));
+        }
     } else {
-        min = Math.min(...values);
-        max = Math.max(...values);
-        sum = values.reduce((acc, num) => acc + num, 0);
-        avg = parseFloat((sum / values.length).toFixed(2));
+        if (values.length === 0) {
+            min = 0;
+            max = 1;
+            sum = 0;
+            avg = 0;
+        } else if (values.every(value => value === values[0])) {
+            min = Math.min(0, values[0]);
+            max = values[0] + 1;
+            sum = values.reduce((acc, num) => acc + num, 0);
+            avg = values[0];
+        } else {
+            min = Math.min(...values);
+            max = Math.max(...values);
+            sum = values.reduce((acc, num) => acc + num, 0);
+            avg = parseFloat((sum / values.length).toFixed(2));
+        }
     }
+
 
     let dataSet = anychart.data.set([avg]);//Where to set avg value!!
     // set the gauge type
@@ -160,39 +190,39 @@ function createGauge(data, container) {
     //set the angle limit for the gauge
     gauge.sweepAngle(180);
     let axis = gauge.axis()
-    .radius(95)
-    .width(1);
+        .radius(95)
+        .width(1);
 
     axis.scale()
-    .minimum(min)//Where to set Min and Max!!
-    .maximum(max);//Where to set Min and Max!!
+        .minimum(min)//Where to set Min and Max!!
+        .maximum(max);//Where to set Min and Max!!
 
     axis.ticks()
-    .enabled(true)
-    .type('line')
-    .length('8')
+        .enabled(true)
+        .type('line')
+        .length('8')
 
     gauge.range({
         from: min,//Also where to set min!!
         to: max,//Also where to set the max!!
-        fill: {keys: ["green", "yellow", "orange" , "red"]},
+        fill: { keys: ["green", "yellow", "orange", "red"] },
         position: "inside",
         radius: 100,
         endSize: "3%",
-        startSize:"3%",
+        startSize: "3%",
         zIndex: 10
     });
     gauge.fill("lightblue", .3);
 
     gauge.needle(0)
-    .enabled(true)
-    .startRadius('-5%')
-    .endRadius('65%')
-    .middleRadius(0)
-    .startWidth('0.1%')
-    .endWidth('0.1%')
-    .middleWidth('5%')
-    
+        .enabled(true)
+        .startRadius('-5%')
+        .endRadius('65%')
+        .middleRadius(0)
+        .startWidth('0.1%')
+        .endWidth('0.1%')
+        .middleWidth('5%')
+
     // draw the chart
     let section = document.createElement("section");
     section.classList.add("flex-grow-1", "d-flex", "justify-content-around", "flex-wrap", "align-items-center");
@@ -247,8 +277,14 @@ function createLineGraphNew(data, container) {
     let chartMetricData = [];
     for (let i = 0; i < data["Timestamps"].length; i++) {
         let chartData = [];
-        chartData.push(data["Timestamps"][i], data["Values"][i])
-        chartMetricData.push(chartData)
+        if (metric === "to_instance_packet_loss_rate") {
+            chartData.push(data["Timestamps"][i], data["Values"][i].toFixed(3))
+            chartMetricData.push(chartData)
+            continue
+        } else {
+            chartData.push(data["Timestamps"][i], data["Values"][i])
+            chartMetricData.push(chartData)
+        } 
     }
     let graphData = {
         "title": metric,
@@ -260,11 +296,11 @@ function createLineGraphNew(data, container) {
 }
 
 function chartLineGraph(graphData, container) {
-    let {title, xAxis, yAxis, data} = graphData;
+    let { title, xAxis, yAxis, data } = graphData;
     let chart = anychart.line();
     chart.data(data);
     chart.title(cleanMetricName(title));
-    
+
     // Step 5: Customize axes
     chart.xAxis().title(xAxis);
 
@@ -272,8 +308,7 @@ function chartLineGraph(graphData, container) {
     flexDiv.classList.add("flex-grow-1");
     let flexDivId = `lineChart_${title}`;
     flexDiv.setAttribute("id", flexDivId);
-    // flexDiv.setAttribute("style", "display: none !important");
-    
+
 
     // Step 6: Display the chart
     chart.container(flexDiv);
@@ -314,11 +349,26 @@ function createTable(data, container) {
     rowHeader.setAttribute("scope", "row");
     rowHeader.innerHTML = metricLabel;
     columnRow.appendChild(rowHeader);
-    data.Values.forEach(value => {
-        let row = document.createElement("td");
-        row.innerHTML = value;
-        columnRow.appendChild(row);
-    })
+    if (data.Id.includes("percentage")) {
+        data.Values.forEach(value => {
+            let row = document.createElement("td");
+            row.innerHTML = value + '%';
+            columnRow.appendChild(row);
+        })
+    } else if (data.Id.includes("packet_loss")){
+        data.Values.forEach(value => {
+            let row = document.createElement("td");
+            row.innerHTML = value.toFixed(3) + '%';
+            columnRow.appendChild(row);
+        })
+    } else {
+        data.Values.forEach(value => {
+            let row = document.createElement("td");
+            row.innerHTML = value;
+            columnRow.appendChild(row);
+        })
+    }
+
     table.appendChild(tableBody);
     tableWrapper.setAttribute("style", "display: none !important");
     container.appendChild(tableWrapper);
@@ -350,10 +400,10 @@ async function submitCustomDateTimeframe() {
         return
     } else {
         if (localTime) {
-            for (let i = 0; i < data.data.MetricDataResults.length; i ++) {
+            for (let i = 0; i < data.data.MetricDataResults.length; i++) {
                 if (data.data.MetricDataResults[i]['Timestamps'].length > 0) {
                     let timestampsArray = data.data.MetricDataResults[i]['Timestamps']
-                    for (let j = 0; j < timestampsArray.length; j ++) {
+                    for (let j = 0; j < timestampsArray.length; j++) {
                         let formatter = new Intl.DateTimeFormat("en-US", {
                             year: "numeric",
                             month: "2-digit",
@@ -416,55 +466,60 @@ function displayTimeandDates() {
 function getFormattedDates() {
     // Get the current date
     const currentDate = new Date();
-  
+
     // Helper function to format date to YYYY-MM-DD
     function formatDate(date) {
-      const year = date.getFullYear();
-      let month = date.getMonth() + 1; // Months are 0-based
-      let day = date.getDate();
-  
-      // Pad month and day with leading zeros if necessary
-      month = month < 10 ? '0' + month : month;
-      day = day < 10 ? '0' + day : day;
-  
-      return `${year}-${month}-${day}`;
+        const year = date.getFullYear();
+        let month = date.getMonth() + 1; // Months are 0-based
+        let day = date.getDate();
+
+        // Pad month and day with leading zeros if necessary
+        month = month < 10 ? '0' + month : month;
+        day = day < 10 ? '0' + day : day;
+
+        return `${year}-${month}-${day}`;
     }
-  
+
     // Helper function to format time to HH:MM
     function formatTime(date) {
-      let hours = date.getHours();
-      let minutes = date.getMinutes();
-  
-      // Pad hours and minutes with leading zeros if necessary
-      hours = hours < 10 ? '0' + hours : hours;
-      minutes = minutes < 10 ? '0' + minutes : minutes;
-  
-      return `${hours}:${minutes}`;
+        let hours = date.getHours();
+        let minutes = date.getMinutes();
+
+        // Pad hours and minutes with leading zeros if necessary
+        hours = hours < 10 ? '0' + hours : hours;
+        minutes = minutes < 10 ? '0' + minutes : minutes;
+
+        return `${hours}:${minutes}`;
     }
-  
+
     // Get the current formatted date and time
     const currentFormattedDate = formatDate(currentDate);
     const currentFormattedTime = formatTime(currentDate);
-  
+
     // Get the date 2 weeks ago
     const twoWeeksAgoDate = new Date(currentDate);
     twoWeeksAgoDate.setDate(currentDate.getDate() - 14);
-  
+
     // Get the formatted date and time for 2 weeks ago
     const twoWeeksAgoFormattedDate = formatDate(twoWeeksAgoDate);
     const twoWeeksAgoFormattedTime = formatTime(twoWeeksAgoDate);
-  
+
     return {
-      currentDate: currentFormattedDate,
-      currentTime: currentFormattedTime,
-      twoWeeksAgoDate: twoWeeksAgoFormattedDate,
-      twoWeeksAgoTime: twoWeeksAgoFormattedTime
+        currentDate: currentFormattedDate,
+        currentTime: currentFormattedTime,
+        twoWeeksAgoDate: twoWeeksAgoFormattedDate,
+        twoWeeksAgoTime: twoWeeksAgoFormattedTime
     };
 }
 
-function dropdownChoice(event) {
-    let dropdownButtonText = document.querySelector("#timezoneButton")
-    dropdownButtonText.innerHTML = event.target.innerHTML
+function timezoneDropdownChoice(event) {
+    let timezoneDropdownButtonText = document.querySelector("#timezoneButton")
+    timezoneDropdownButtonText.innerHTML = event.target.innerHTML
+}
+
+function refreshDropdownChoice(event) {
+    let refreshDropdownButton = document.querySelector("#autoRefreshButton");
+    refreshDropdownButton.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-lg"></i> ${event.target.innerHTML}`;
 }
 
 function localDateToUTC(rawDateInput, rawTimeInput) {
@@ -480,17 +535,176 @@ document.addEventListener("DOMContentLoaded", function () {
     displayMetricTableData();
     displayTimeandDates();
 });
-  
+
 //For testing purposes, use fake data to simulate real data when working in test environment, because not authenticated with Cognito
 
-// let fakeData = { "MetricDataResults": [{ "Id": "calls_per_interval", "Label": "VoiceCalls CallsPerInterval", "Timestamps": ["12/11/2024 10:36 AM", "12/11/2024 2:36 PM", "12/12/2024 3:41 PM", "12/16/2024 2:42 PM"], "Values": [6.0, 2.0, 4.0, 1.0] }, { "Id": "missed_calls", "Label": "VoiceCalls MissedCalls", "Timestamps": ["12/10/2024 01:00 AM","12/10/2024 04:00 AM", "12/10/2024 06:32 AM"], "Values": [1.0,2.0,4.0] }, { "Id": "calls_breaching_concurrency_quota", "Label": "VoiceCalls CallsBreachingConcurrencyQuota", "Timestamps": [], "Values": [] }, { "Id": "call_recording_upload_error", "Label": "CallRecordings CallRecordingUploadError", "Timestamps": [], "Values": [] }, { "Id": "chats_breaching_active_chat_quota", "Label": "Chats ChatsBreachingActiveChatQuota", "Timestamps": [], "Values": [] }, { "Id": "concurrent_active_chats", "Label": "Chats ConcurrentActiveChats", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowErrors", "Timestamps": [], "Values": [] }, { "Id": "contact_flow_fatal_errors", "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowFatalErrors", "Timestamps": [], "Values": [] }, { "Id": "throttled_calls", "Label": "VoiceCalls ThrottledCalls", "Timestamps": [], "Values": [] }, { "Id": "to_instance_packet_loss_rate", "Label": "Agent Voice WebRTC ToInstancePacketLossRate", "Timestamps": [], "Values": [] }] }
+// let fakeData = {
+//     "MetricDataResults": [
+//       {
+//         "Id": "calls_per_interval",
+//         "Label": "VoiceCalls CallsPerInterval",
+//         "Timestamps": [
+//           "12/11/2024 10:36 AM",
+//           "12/11/2024 2:36 PM",
+//           "12/12/2024 3:41 PM",
+//           "12/16/2024 2:42 PM"
+//         ],
+//         "Values": [
+//           6,
+//           2,
+//           4,
+//           1
+//         ]
+//       },
+//       {
+//         "Id": "missed_calls",
+//         "Label": "VoiceCalls MissedCalls",
+//         "Timestamps": [
+//           "12/10/2024 01:00 AM",
+//           "12/10/2024 04:00 AM",
+//           "12/10/2024 06:32 AM"
+//         ],
+//         "Values": [
+//           1,
+//           2,
+//           4
+//         ]
+//       },
+//       {
+//         "Id": "calls_breaching_concurrency_quota",
+//         "Label": "VoiceCalls CallsBreachingConcurrencyQuota",
+//         "Timestamps": [
+//           "12/11/2024 10:36 AM",
+//           "12/11/2024 10:46 AM",
+//           "12/11/2024 10:56 AM"
+//         ],
+//         "Values": [
+//           1,
+//           1,
+//           1
+//         ]
+//       },
+//       {
+//         "Id": "concurrent_calls_percentage",
+//         "Label": "VoiceCalls ConcurrentCallsPercentage",
+//         "Timestamps": [
+//           "01/09/2025 7:15 AM",
+//           "01/09/2025 7:20 AM",
+//           "01/09/2025 7:30 AM",
+//           "01/09/2025 7:35 AM",
+//           "01/09/2025 7:40 AM",
+//           "01/09/2025 7:45 AM",
+//           "01/09/2025 7:50 AM",
+//           "01/09/2025 7:55 AM",
+//           "01/10/2025 10:00 AM",
+//           "01/10/2025 10:05 AM",
+//           "01/10/2025 10:10 AM",
+//           "01/13/2025 10:50 AM",
+//           "01/13/2025 10:55 AM",
+//           "01/13/2025 11:05 AM",
+//           "01/13/2025 11:10 AM",
+//           "01/13/2025 11:15 AM",
+//           "01/13/2025 11:30 AM"
+//         ],
+//         "Values": [
+//           0.1,
+//           0.1,
+//           0.1469512195121951,
+//           0.1,
+//           0.13077339102217417,
+//           0.12989323843416373,
+//           0.10000000000000002,
+//           0.10000000000000002,
+//           0.09999999999999998,
+//           0.09999999999999999,
+//           0.09999999999999998,
+//           0.1793103448275862,
+//           0.14564973861090366,
+//           0.10000000000000002,
+//           0.1,
+//           0.09999999999999999,
+//           0.1
+//         ]
+//       },
+//       {
+//         "Id": "call_recording_upload_error",
+//         "Label": "CallRecordings CallRecordingUploadError",
+//         "Timestamps": [],
+//         "Values": []
+//       },
+//       {
+//         "Id": "chats_breaching_active_chat_quota",
+//         "Label": "Chats ChatsBreachingActiveChatQuota",
+//         "Timestamps": [],
+//         "Values": []
+//       },
+//       {
+//         "Id": "concurrent_active_chats",
+//         "Label": "Chats ConcurrentActiveChats",
+//         "Timestamps": [],
+//         "Values": []
+//       },
+//       {
+//         "Id": "contact_flow_errors",
+//         "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowErrors",
+//         "Timestamps": [],
+//         "Values": []
+//       },
+//       {
+//         "Id": "contact_flow_fatal_errors",
+//         "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowFatalErrors",
+//         "Timestamps": [],
+//         "Values": []
+//       },
+//       {
+//         "Id": "throttled_calls",
+//         "Label": "VoiceCalls ThrottledCalls",
+//         "Timestamps": [],
+//         "Values": []
+//       },
+//       {
+//         "Id": "to_instance_packet_loss_rate",
+//         "Label": "Agent Voice WebRTC ToInstancePacketLossRate",
+//         "Timestamps": [
+//             "01/09/2025 7:15 AM",
+//             "01/09/2025 7:20 AM",
+//             "01/09/2025 7:30 AM",
+//             "01/09/2025 7:35 AM",
+//             "01/09/2025 7:40 AM",
+//             "01/09/2025 7:45 AM",
+//             "01/09/2025 7:50 AM",
+//             "01/10/2025 10:10 AM",
+//             "01/13/2025 10:55 AM",
+//             "01/13/2025 11:05 AM",
+//             "01/13/2025 11:10 AM",
+//             "01/13/2025 11:15 AM",
+//             "01/13/2025 11:30 AM"
+//           ],
+//         "Values": [
+//             0.001002004008016032,
+//             0.002004008016032064,
+//             0.004008016032064128,
+//             0,
+//             0.0028024112096448383,
+//             0.002004008016032064,
+//             0.0050200803212851405,
+//             0.005681792478862917,
+//             0.0007301935012778385,
+//             0.01002004008016032,
+//             0.000502008032128514,
+//             0.18457083194600304,
+//             0.004011034116425622
+//           ]
+//       }
+//     ]
+//   }
 // let completeFakeData = {
 //     "data": fakeData,
 //     "result": true
 // }
 
 // sessionStorage.setItem("fakeMetricVisionData", JSON.stringify(completeFakeData))
-  
+
 
 
 
