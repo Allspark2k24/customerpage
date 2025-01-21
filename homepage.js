@@ -1,13 +1,15 @@
 //newdevinstancehyberscaler AWS Connect instance
 let customer1 = {
     "connectARN": "50a49da4-8909-443b-a3c0-33bb97ce165c",
-    "contactFlowARN": "5a3c0863-4337-4f3b-ae8c-a81c233aa2f3"
+    "contactFlowARN": "5a3c0863-4337-4f3b-ae8c-a81c233aa2f3",
+    "contactFlowName": "MainFlow"
 }
 
 //devinstance AWS Connect instance
 let customer2 = {
     "connectARN": "15e62379-5da6-4894-a63d-0aa38892ad7c",
-    "contactFlowARN": "dc37c1aa-8a22-4b34-b18d-96c31ce0fa60"
+    "contactFlowARN": "dc37c1aa-8a22-4b34-b18d-96c31ce0fa60",
+    "contactFlowName": "MainFlow"
 }
 
 customer1Button = document.querySelector("#customer1")
@@ -17,7 +19,8 @@ customer2Button.value = JSON.stringify(customer2)
 function redirect(arnObject) {
     let connectARN = arnObject.connectARN;
     let contactFlowARN = arnObject.contactFlowARN;
-    location.href = `metrics.html?connectARN=${connectARN}&contactFlowARN=${contactFlowARN}`;
+    let contactFlowName = arnObject.contactFlowName;
+    location.href = `metrics.html?connectARN=${connectARN}&contactFlowARN=${contactFlowARN}&contactFlowName=${contactFlowName}`;
 }
 
 function parseARNObject(event) {
