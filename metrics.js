@@ -3,9 +3,11 @@ async function getARNQueryParams() {
     let urlParams = new URLSearchParams(queryString);
     let connectARN = urlParams.get("connectARN")
     let contactFlowARN = urlParams.get("contactFlowARN")
+    let contactFlowName = urlParams.get("contactFlowName")
     return {
         "connectARN": connectARN,
-        "contactFlowARN": contactFlowARN
+        "contactFlowARN": contactFlowARN,
+        "contactFlowName": contactFlowName
     }
 }
 
@@ -20,7 +22,7 @@ async function customTimeFetchCloudWatchData(customStartTimeandDate, customEndTi
     }
 
     let arn = await getARNQueryParams();
-    let paramURL = `${baseURL}/?connectARN=${arn["connectARN"]}&contactFlowARN=${arn["contactFlowARN"]}${customStartTimeParam}${customEndTimeParam}`;
+    let paramURL = `${baseURL}/?connectARN=${arn["connectARN"]}&contactFlowARN=${arn["contactFlowARN"]}&contactFlowName=${arn["contactFlowName"]}${customStartTimeParam}${customEndTimeParam}`;
     try {
         let token = sessionStorage.getItem("MetricVisionAccessToken");
         let response = await fetch(paramURL, {
@@ -63,9 +65,9 @@ async function displayMetricTableData() {
     loadingModal.innerHTML = "loading . . .";
     let sectionHeader = document.querySelector(".loading");
     sectionHeader.append(loadingModal);
-    let data = await customTimeFetchCloudWatchData("", "");
-    // let data = JSON.parse(sessionStorage.getItem("fakeMetricVisionData"))
-    // console.log(data)
+    // let data = await customTimeFetchCloudWatchData("", "");
+    let data = JSON.parse(sessionStorage.getItem("fakeMetricVisionData"))
+    console.log(data)
     if (!data.result) {
         sectionHeader.removeChild(loadingModal);
         let error = document.createElement("p");
@@ -380,18 +382,36 @@ async function submitCustomDateTimeframe() {
     let startTime = document.querySelector("#startTime").value
     let endTime = document.querySelector("#endTime").value
     let timezoneChoice = document.querySelector("#timezoneButton").innerHTML
-    let localTime = false;
-    if (timezoneChoice === "Local Timezone") {
-        localTime = true;
+    let localTimezoneChoice = timezoneChoice.split(" ")[0];
+    let formatterOptions = {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
     }
+    let timezoneFormats = {
+        "Hawaii": "Pacific/Honolulu",
+        "Alaska": "America/Anchorage",
+        "Pacific": "America/Los_Angeles", 
+        "Mountain": "America/Denver",
+        "Central": "America/Chicago",
+        "Eastern": "America/New_York",
+        "UTC": "UTC"
+    }
+    if (localTimezoneChoice != "Local") {
+        formatterOptions.timeZone = timezoneFormats[localTimezoneChoice];
+    }
+
     let startUTC = localDateToUTC(startDate, startTime);
     let endUTC = localDateToUTC(endDate, endTime);
     let loadingModal = document.createElement("p");
     loadingModal.innerHTML = "loading . . .";
     let sectionHeader = document.querySelector(".loading");
     sectionHeader.append(loadingModal);
-    let data = await customTimeFetchCloudWatchData(startUTC, endUTC);
-    // let data = JSON.parse(sessionStorage.getItem("fakeMetricVisionData"))
+    // let data = await customTimeFetchCloudWatchData(startUTC, endUTC);
+    let data = JSON.parse(sessionStorage.getItem("fakeMetricVisionData"))
     if (!data.result) {
         sectionHeader.removeChild(loadingModal);
         let error = document.createElement("p");
@@ -399,24 +419,15 @@ async function submitCustomDateTimeframe() {
         sectionHeader.appendChild(error);
         return
     } else {
-        if (localTime) {
-            for (let i = 0; i < data.data.MetricDataResults.length; i++) {
-                if (data.data.MetricDataResults[i]['Timestamps'].length > 0) {
-                    let timestampsArray = data.data.MetricDataResults[i]['Timestamps']
-                    for (let j = 0; j < timestampsArray.length; j++) {
-                        let formatter = new Intl.DateTimeFormat("en-US", {
-                            year: "numeric",
-                            month: "2-digit",
-                            day: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: true,
-                        });
-                        let UTCDate = timestampsArray[j] + " UTC";
-                        let UTCDateObject = new Date(UTCDate);
-                        let formattedDate = formatter.format(UTCDateObject);
-                        timestampsArray[j] = formattedDate;
-                    }
+        for (let i = 0; i < data.data.MetricDataResults.length; i++) {
+            if (data.data.MetricDataResults[i]['Timestamps'].length > 0) {
+                let timestampsArray = data.data.MetricDataResults[i]['Timestamps']
+                for (let j = 0; j < timestampsArray.length; j++) {
+                    let formatter = new Intl.DateTimeFormat("en-US", formatterOptions)
+                    let UTCDate = timestampsArray[j] + " UTC";
+                    let UTCDateObject = new Date(UTCDate);
+                    let formattedDate = formatter.format(UTCDateObject);
+                    timestampsArray[j] = formattedDate;
                 }
             }
         }
@@ -538,172 +549,172 @@ document.addEventListener("DOMContentLoaded", function () {
 
 //For testing purposes, use fake data to simulate real data when working in test environment, because not authenticated with Cognito
 
-// let fakeData = {
-//     "MetricDataResults": [
-//       {
-//         "Id": "calls_per_interval",
-//         "Label": "VoiceCalls CallsPerInterval",
-//         "Timestamps": [
-//           "12/11/2024 10:36 AM",
-//           "12/11/2024 2:36 PM",
-//           "12/12/2024 3:41 PM",
-//           "12/16/2024 2:42 PM"
-//         ],
-//         "Values": [
-//           6,
-//           2,
-//           4,
-//           1
-//         ]
-//       },
-//       {
-//         "Id": "missed_calls",
-//         "Label": "VoiceCalls MissedCalls",
-//         "Timestamps": [
-//           "12/10/2024 01:00 AM",
-//           "12/10/2024 04:00 AM",
-//           "12/10/2024 06:32 AM"
-//         ],
-//         "Values": [
-//           1,
-//           2,
-//           4
-//         ]
-//       },
-//       {
-//         "Id": "calls_breaching_concurrency_quota",
-//         "Label": "VoiceCalls CallsBreachingConcurrencyQuota",
-//         "Timestamps": [
-//           "12/11/2024 10:36 AM",
-//           "12/11/2024 10:46 AM",
-//           "12/11/2024 10:56 AM"
-//         ],
-//         "Values": [
-//           1,
-//           1,
-//           1
-//         ]
-//       },
-//       {
-//         "Id": "concurrent_calls_percentage",
-//         "Label": "VoiceCalls ConcurrentCallsPercentage",
-//         "Timestamps": [
-//           "01/09/2025 7:15 AM",
-//           "01/09/2025 7:20 AM",
-//           "01/09/2025 7:30 AM",
-//           "01/09/2025 7:35 AM",
-//           "01/09/2025 7:40 AM",
-//           "01/09/2025 7:45 AM",
-//           "01/09/2025 7:50 AM",
-//           "01/09/2025 7:55 AM",
-//           "01/10/2025 10:00 AM",
-//           "01/10/2025 10:05 AM",
-//           "01/10/2025 10:10 AM",
-//           "01/13/2025 10:50 AM",
-//           "01/13/2025 10:55 AM",
-//           "01/13/2025 11:05 AM",
-//           "01/13/2025 11:10 AM",
-//           "01/13/2025 11:15 AM",
-//           "01/13/2025 11:30 AM"
-//         ],
-//         "Values": [
-//           0.1,
-//           0.1,
-//           0.1469512195121951,
-//           0.1,
-//           0.13077339102217417,
-//           0.12989323843416373,
-//           0.10000000000000002,
-//           0.10000000000000002,
-//           0.09999999999999998,
-//           0.09999999999999999,
-//           0.09999999999999998,
-//           0.1793103448275862,
-//           0.14564973861090366,
-//           0.10000000000000002,
-//           0.1,
-//           0.09999999999999999,
-//           0.1
-//         ]
-//       },
-//       {
-//         "Id": "call_recording_upload_error",
-//         "Label": "CallRecordings CallRecordingUploadError",
-//         "Timestamps": [],
-//         "Values": []
-//       },
-//       {
-//         "Id": "chats_breaching_active_chat_quota",
-//         "Label": "Chats ChatsBreachingActiveChatQuota",
-//         "Timestamps": [],
-//         "Values": []
-//       },
-//       {
-//         "Id": "concurrent_active_chats",
-//         "Label": "Chats ConcurrentActiveChats",
-//         "Timestamps": [],
-//         "Values": []
-//       },
-//       {
-//         "Id": "contact_flow_errors",
-//         "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowErrors",
-//         "Timestamps": [],
-//         "Values": []
-//       },
-//       {
-//         "Id": "contact_flow_fatal_errors",
-//         "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowFatalErrors",
-//         "Timestamps": [],
-//         "Values": []
-//       },
-//       {
-//         "Id": "throttled_calls",
-//         "Label": "VoiceCalls ThrottledCalls",
-//         "Timestamps": [],
-//         "Values": []
-//       },
-//       {
-//         "Id": "to_instance_packet_loss_rate",
-//         "Label": "Agent Voice WebRTC ToInstancePacketLossRate",
-//         "Timestamps": [
-//             "01/09/2025 7:15 AM",
-//             "01/09/2025 7:20 AM",
-//             "01/09/2025 7:30 AM",
-//             "01/09/2025 7:35 AM",
-//             "01/09/2025 7:40 AM",
-//             "01/09/2025 7:45 AM",
-//             "01/09/2025 7:50 AM",
-//             "01/10/2025 10:10 AM",
-//             "01/13/2025 10:55 AM",
-//             "01/13/2025 11:05 AM",
-//             "01/13/2025 11:10 AM",
-//             "01/13/2025 11:15 AM",
-//             "01/13/2025 11:30 AM"
-//           ],
-//         "Values": [
-//             0.001002004008016032,
-//             0.002004008016032064,
-//             0.004008016032064128,
-//             0,
-//             0.0028024112096448383,
-//             0.002004008016032064,
-//             0.0050200803212851405,
-//             0.005681792478862917,
-//             0.0007301935012778385,
-//             0.01002004008016032,
-//             0.000502008032128514,
-//             0.18457083194600304,
-//             0.004011034116425622
-//           ]
-//       }
-//     ]
-//   }
-// let completeFakeData = {
-//     "data": fakeData,
-//     "result": true
-// }
+let fakeData = {
+    "MetricDataResults": [
+      {
+        "Id": "calls_per_interval",
+        "Label": "VoiceCalls CallsPerInterval",
+        "Timestamps": [
+          "12/11/2024 10:36 AM",
+          "12/11/2024 2:36 PM",
+          "12/12/2024 3:41 PM",
+          "12/16/2024 2:42 PM"
+        ],
+        "Values": [
+          6,
+          2,
+          4,
+          1
+        ]
+      },
+      {
+        "Id": "missed_calls",
+        "Label": "VoiceCalls MissedCalls",
+        "Timestamps": [
+          "12/10/2024 01:00 AM",
+          "12/10/2024 04:00 AM",
+          "12/10/2024 06:32 AM"
+        ],
+        "Values": [
+          1,
+          2,
+          4
+        ]
+      },
+      {
+        "Id": "calls_breaching_concurrency_quota",
+        "Label": "VoiceCalls CallsBreachingConcurrencyQuota",
+        "Timestamps": [
+          "12/11/2024 10:36 AM",
+          "12/11/2024 10:46 AM",
+          "12/11/2024 10:56 AM"
+        ],
+        "Values": [
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "Id": "concurrent_calls_percentage",
+        "Label": "VoiceCalls ConcurrentCallsPercentage",
+        "Timestamps": [
+          "01/09/2025 7:15 AM",
+          "01/09/2025 7:20 AM",
+          "01/09/2025 7:30 AM",
+          "01/09/2025 7:35 AM",
+          "01/09/2025 7:40 AM",
+          "01/09/2025 7:45 AM",
+          "01/09/2025 7:50 AM",
+          "01/09/2025 7:55 AM",
+          "01/10/2025 10:00 AM",
+          "01/10/2025 10:05 AM",
+          "01/10/2025 10:10 AM",
+          "01/13/2025 10:50 AM",
+          "01/13/2025 10:55 AM",
+          "01/13/2025 11:05 AM",
+          "01/13/2025 11:10 AM",
+          "01/13/2025 11:15 AM",
+          "01/13/2025 11:30 AM"
+        ],
+        "Values": [
+          0.1,
+          0.1,
+          0.1469512195121951,
+          0.1,
+          0.13077339102217417,
+          0.12989323843416373,
+          0.10000000000000002,
+          0.10000000000000002,
+          0.09999999999999998,
+          0.09999999999999999,
+          0.09999999999999998,
+          0.1793103448275862,
+          0.14564973861090366,
+          0.10000000000000002,
+          0.1,
+          0.09999999999999999,
+          0.1
+        ]
+      },
+      {
+        "Id": "call_recording_upload_error",
+        "Label": "CallRecordings CallRecordingUploadError",
+        "Timestamps": [],
+        "Values": []
+      },
+      {
+        "Id": "chats_breaching_active_chat_quota",
+        "Label": "Chats ChatsBreachingActiveChatQuota",
+        "Timestamps": [],
+        "Values": []
+      },
+      {
+        "Id": "concurrent_active_chats",
+        "Label": "Chats ConcurrentActiveChats",
+        "Timestamps": [],
+        "Values": []
+      },
+      {
+        "Id": "contact_flow_errors",
+        "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowErrors",
+        "Timestamps": [],
+        "Values": []
+      },
+      {
+        "Id": "contact_flow_fatal_errors",
+        "Label": "1cf9d6bb-1a1e-44a4-b3c7-951cc17cb9de ContactFlow ContactFlowFatalErrors",
+        "Timestamps": [],
+        "Values": []
+      },
+      {
+        "Id": "throttled_calls",
+        "Label": "VoiceCalls ThrottledCalls",
+        "Timestamps": [],
+        "Values": []
+      },
+      {
+        "Id": "to_instance_packet_loss_rate",
+        "Label": "Agent Voice WebRTC ToInstancePacketLossRate",
+        "Timestamps": [
+            "01/09/2025 7:15 AM",
+            "01/09/2025 7:20 AM",
+            "01/09/2025 7:30 AM",
+            "01/09/2025 7:35 AM",
+            "01/09/2025 7:40 AM",
+            "01/09/2025 7:45 AM",
+            "01/09/2025 7:50 AM",
+            "01/10/2025 10:10 AM",
+            "01/13/2025 10:55 AM",
+            "01/13/2025 11:05 AM",
+            "01/13/2025 11:10 AM",
+            "01/13/2025 11:15 AM",
+            "01/13/2025 11:30 AM"
+          ],
+        "Values": [
+            0.001002004008016032,
+            0.002004008016032064,
+            0.004008016032064128,
+            0,
+            0.0028024112096448383,
+            0.002004008016032064,
+            0.0050200803212851405,
+            0.005681792478862917,
+            0.0007301935012778385,
+            0.01002004008016032,
+            0.000502008032128514,
+            0.18457083194600304,
+            0.004011034116425622
+          ]
+      }
+    ]
+  }
+let completeFakeData = {
+    "data": fakeData,
+    "result": true
+}
 
-// sessionStorage.setItem("fakeMetricVisionData", JSON.stringify(completeFakeData))
+sessionStorage.setItem("fakeMetricVisionData", JSON.stringify(completeFakeData))
 
 
 
